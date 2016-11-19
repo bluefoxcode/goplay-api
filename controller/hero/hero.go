@@ -1,62 +1,81 @@
 package hero
 
 import (
-	"log"
+	"encoding/json"
+	"io/ioutil"
 	"net/http"
 
+	"github.com/bluefoxcode/goplay-api/lib/router"
 	"github.com/bluefoxcode/goplay-api/lib/util"
 	"github.com/bluefoxcode/goplay-api/model/hero"
-	"github.com/gorilla/mux"
+	"github.com/unrolled/render"
 )
 
 var (
-	url = "/heroes"
+	url = "/hero"
+	r   *render.Render
 )
 
-var (
-	router *mux.Router
-)
-
-func init() {
-	router = mux.NewRouter()
+type apiError struct {
+	Message string
+	Code    int
 }
 
 // Load the routes.
 func Load() {
-	router.HandleFunc("/heroes", Index).Methods("GET")
+	r = render.New(render.Options{
+		IndentJSON: true,
+	})
+	router.Get(url, Index)
+	router.Post(url, Create)
+	router.Get(url+"/{id}", Show)
 }
 
 // Index displays list of heroes
-func Index(w http.ResponseWriter, r *http.Request) {
-	c := util.Context(w, r)
+func Index(w http.ResponseWriter, req *http.Request) {
+	c := util.Context(w, req)
 	items, _, err := hero.List(c.DB)
+
 	if err != nil {
-		panic(err)
+		r.JSON(w, http.StatusBadRequest, apiError{Message: "Bad Request", Code: http.StatusBadRequest})
+		return
 	}
-	log.Println(items)
-	// r := render.New(render.Options{
-	// 	IndentJSON: true,
-	// })
+	if items == nil {
+		r.JSON(w, http.StatusOK, map[string]string{})
+		return
+	}
+	r.JSON(w, http.StatusOK, items)
 
-	// rows, err := db.Query("SELECT * FROM HEROES")
-	// if err != nil {
-	// 	log.Println(fmt.Sprintf("Error creating database: %q", err))
-	// }
+}
 
-	// defer rows.Close()
+// Show displays a single item.
+func Show(w http.ResponseWriter, req *http.Request) {
+	c := util.Context(w, req)
 
-	// heroes := make([]*Hero, 0)
+	item, _, err := hero.ByID(c.DB, c.Param("id"))
 
-	// for rows.Next() {
-	// 	hero := new(Hero)
+	if err != nil {
+		r.JSON(w, http.StatusNotFound, apiError{Message: "Not Found", Code: http.StatusNotFound})
+		return
+	}
 
-	// 	if err := rows.Scan(&hero.Name, &hero.Description); err != nil {
-	// 		errorCode := http.StatusInternalServerError
-	// 		r.JSON(w, errorCode, map[string]string{"code": strconv.Itoa(errorCode), "message": fmt.Sprintf("%q", err)})
-	// 		return
-	// 	}
-	// 	heroes = append(heroes, hero)
-	// }
+	r.JSON(w, http.StatusOK, item)
 
-	// r.JSON(w, http.StatusOK, heroes)
+}
+
+// Create adds an item.
+func Create(w http.ResponseWriter, req *http.Request) {
+	c := util.Context(w, req)
+	var h hero.Item
+	b, _ := ioutil.ReadAll(req.Body)
+	json.Unmarshal(b, &h)
+
+	_, err := hero.Create(c.DB, h.Name, h.Description)
+
+	if err != nil {
+		r.JSON(w, http.StatusInternalServerError, err)
+		return
+	}
+
+	r.JSON(w, http.StatusCreated, "Successfully Created New Hero.")
 }

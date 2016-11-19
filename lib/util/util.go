@@ -4,6 +4,7 @@ import (
 	"net/http"
 	"sync"
 
+	"github.com/bluefoxcode/goplay-api/lib/router"
 	"github.com/jmoiron/sqlx"
 )
 
@@ -19,7 +20,7 @@ func StoreDB(db *sqlx.DB) {
 	mutex.Unlock()
 }
 
-// info structures the application settings.
+// Info structures the application settings.
 type Info struct {
 	W  http.ResponseWriter
 	R  *http.Request
@@ -38,8 +39,14 @@ func Context(w http.ResponseWriter, r *http.Request) Info {
 	return i
 }
 
+// CheckErr is quick utility for panicking
 func CheckErr(err error) {
 	if err != nil {
 		panic(err)
 	}
+}
+
+// Param gets the URL parameter.
+func (c *Info) Param(name string) string {
+	return router.Param(c.R, name)
 }
