@@ -18,7 +18,7 @@ type Item struct {
 
 // Connection is an interface for making queries.
 type Connection interface {
-	Exec(query string, args ...interface{}) (sql.Result, error)
+	Exec(query string, args ...interface{}) error
 	Get(dest interface{}, query string, args ...interface{}) error
 	Select(dest interface{}, query string, args ...interface{}) error
 }
@@ -48,15 +48,22 @@ func ByID(db Connection, ID string) (Item, bool, error) {
 }
 
 // Create adds an item
-func Create(db Connection, name string, description string) (sql.Result, error) {
-	result, err := db.Exec(fmt.Sprintf(`
+func Create(db Connection, name string, description string) (int, error) {
+	var id int
+	err := db.Exec(fmt.Sprintf(`
 	INSERT INTO %v
 	(name, description)
 	VALUES
 	($1, $2)
+	RETURNING id
 	`, table),
-		name, description)
-	return result, err
+		name, description).scan(&id)
+
+	if err != nil {
+		return nil, err
+	}
+
+	return id, err
 }
 
 // Initialize sets up the database and prepopulates it.
