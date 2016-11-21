@@ -3,6 +3,7 @@ package hero
 import (
 	"encoding/json"
 	"io/ioutil"
+	"log"
 	"net/http"
 
 	"github.com/bluefoxcode/goplay-api/lib/router"
@@ -37,6 +38,7 @@ func Index(w http.ResponseWriter, req *http.Request) {
 	items, _, err := hero.List(c.DB)
 
 	if err != nil {
+		log.Println("Error in controller/hero/Index: ", err)
 		r.JSON(w, http.StatusBadRequest, apiError{Message: "Bad Request", Code: http.StatusBadRequest})
 		return
 	}
@@ -77,5 +79,5 @@ func Create(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	r.JSON(w, http.StatusCreated, "Successfully Created New Hero.")
+	r.JSON(w, http.StatusCreated, "New Hero Created.")
 }
